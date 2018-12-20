@@ -1,0 +1,136 @@
+---
+title: "lab5"
+author: "Сопова Екатерина, РИ-450004"
+date: '13 декабря 2018 г '
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+**Дисперсионный анализ**
+
+- Загрузка данных 
+   
+```{r}
+data = read.csv("diet.csv",row.names=1)
+summary(data)
+```
+
+- Ознакомление со структурой и работа с данными
+https://www.sheffield.ac.uk/polopoly_fs/1.547015!/file/Diet_data_description.docx   
+https://www.sheffield.ac.uk/mash/data 
+
+```{r}
+colnames(data) <- c("gender", "age", "height", "initial.weight", 
+                    "diet.type", "final.weight")
+data$diet.type <- factor(c("A", "B", "C")[data$diet.type])
+
+#Добавим новую колонку - Похудение
+data$weight.loss = data$initial.weight - data$final.weight
+#Проанализиуем есть ли различия по типам диет
+boxplot(weight.loss~diet.type,data=data,col="light gray",
+        ylab = "Weight loss (kg)", xlab = "Diet type")
+abline(h=0,col="green")
+
+#проверим сбалансированные ли данные
+table(data$diet.type)
+
+#График групповых средних
+library(gplots) #библиотека устанавлевается с помощью install.packages
+plotmeans(weight.loss ~ diet.type, data=data)
+aggregate(data$weight.loss, by = list(data$diet.type), FUN=sd)
+
+#Для подгонки ANOVA модели используем функцию aov, частный случай линейной модели lm
+#тест на межгрупповые различия
+fit <- aov(weight.loss ~ diet.type, data=data)
+summary(fit)
+
+#попарные различия между средними значениями для всех групп
+TukeyHSD(fit)
+
+#Tukey honest significant differences test)
+library(multcomp)
+par(mar=c(5,4,6,2))
+tuk <- glht(fit, linfct=mcp(diet.type="Tukey"))
+plot(cld(tuk, level=.05),col="lightgrey")
+```
+```{r}
+#Определение выбросов
+plot(data$weight.loss,data$diet.type)
+data.noout<-data[data$weight.loss<=8,]
+```
+```{r}
+#Повторное проведение всех тестов и сравнение результатов с выбросами и без
+ boxplot(weight.loss~diet.type,data=data.noout,col="light gray",
+         ylab = "Weight loss (kg)", xlab = "Diet type")
+ abline(h=0,col="green")
+```
+```{r}
+#График групповых средних
+ library(gplots)
+ plotmeans(weight.loss ~ diet.type, data=data.noout)
+ aggregate(data$weight.loss, by = list(data$diet.type), FUN=sd)
+```
+```{r}
+#Для подгонки ANOVA модели используем функцию aov, частный случай линейной модели lm
+ fit.noout <- aov(weight.loss ~ diet.type, data=data.noout)
+ summary(fit.noout)
+```
+```{r}
+#Попарные различия между средними значениями для всех груп
+ TukeyHSD(fit.noout)
+```
+```{r}
+#Tukey honest significant differences test)
+ library(multcomp)
+ par(mar=c(5,4,6,2))
+ tuk <- glht(fit.noout, linfct=mcp(diet.type="Tukey"))
+ plot(cld(tuk, level=.05),col="lightgrey")
+```
+
+Вывод:после удаления выбросов диета B стала считаться лучше диеты A, т.к.  B-A стало 0.2213805 > 0 (до удаления выбросов B-A = -0.2740741). 
+
+
+Зависимость потери веса от пола
+```{r}
+ data.noout.with_gender<-data[!is.na(data$gender),]
+ data.noout.with_gender$gender <- factor(c("Female","Male")[as.ordered(data.noout.with_gender$gender)])
+```
+
+```{r}
+#Зависимость от пола
+ boxplot(weight.loss~gender,data=data.noout.with_gender,col="light gray",
+         ylab = "Weight loss (kg)", xlab = "Gender")
+ abline(h=0,col="green")
+```
+
+```{r}
+#График групповых средних
+ plotmeans(weight.loss ~ gender, data.noout.with_gender)
+ aggregate(data.noout.with_gender$weight.loss, by = list(data.noout.with_gender$gender), FUN=sd)
+```
+
+```{r}
+#Для подгонки ANOVA модели используем функцию aov, частный случай линейной модели lm тест на межгрупповые различия
+ fit.noout <- aov(weight.loss ~ gender, data.noout.with_gender)
+ summary(fit.noout)
+```
+
+```{r}
+#Попарные различия между средними значениями для всех груп
+ TukeyHSD(fit.noout)
+```
+
+```{r}
+#Tukey honest significant differences test)
+ library(multcomp)
+ par(mar=c(5,4,6,2))
+ tuk <- glht(fit.noout, linfct=mcp(gender="Tukey"))
+ plot(cld(tuk, level=.05),col="lightgrey")
+```
+
+Вывод
+Исходя из полученных значений, можно сделать вывод, что потеря веса незначительно зависит от пола (у мужчин показатель сброса веса выше), т.к. разница составляет всего 0.1221283
+
+
